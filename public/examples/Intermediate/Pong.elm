@@ -7,11 +7,12 @@ import Window
 
 -- Inputs
 
-type Input = { space:Bool, dir1:Int, dir2:Int, delta:Time }
+type Input = { space:Bool, ctrl:Bool, dir1:Int, dir2:Int, delta:Time }
 
 delta = inSeconds <~ fps 35
 
 input = sampleOn delta (Input <~ Keyboard.space
+                               ~ Keyboard.ctrl
                                ~ lift .y Keyboard.wasd
                                ~ lift .y Keyboard.arrows
                                ~ delta)
@@ -67,10 +68,11 @@ stepPlyr t dir points player =
                 , score <- player.score + points }
 
 stepGame : Input -> Game -> Game
-stepGame {space,dir1,dir2,delta} ({state,ball,player1,player2} as game) =
+stepGame {space,ctrl,dir1,dir2,delta} ({state,ball,player1,player2} as game) =
   let score1 = if ball.x >  halfWidth then 1 else 0
       score2 = if ball.x < -halfWidth then 1 else 0
   in  {game| state   <- if | space            -> Play
+                           | ctrl              -> Pause
                            | score1 /= score2 -> Pause
                            | otherwise        -> state
            , ball    <- if state == Pause then ball else
@@ -100,6 +102,7 @@ display (w,h) {state,ball,player1,player2} =
        , oval 15 15 |> make ball
        , rect 10 40 |> make player1
        , rect 10 40 |> make player2
+       , rect 0 gameHeight |> outlined (dashed textGreen)
        , toForm scores |> move (0, gameHeight/2 - 40)
        , toForm (if state == Play then spacer 1 1 else txt identity msg)
            |> move (0, 40 - gameHeight/2)
