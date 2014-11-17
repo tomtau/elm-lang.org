@@ -75,7 +75,7 @@ stepPlyr t dir points player =
                 , score <- player.score + points }
 
 stepGame : Input -> Game -> Game
-stepGame {space,keys,dir1,dir2,delta} ({state,ball,player1,player2} as game) =
+stepGame {space,keys,dir1,dir2,delta} ({state,ball,player1,player2} as game) = if (any ((==)restartKey) keys) then defaultGame else
   let score1 = if ball.x >  halfWidth then 1 else 0
       score2 = if ball.x < -halfWidth then 1 else 0
   in  {game| state   <- if | space            -> Play
@@ -95,7 +95,7 @@ gameState = foldp stepGame defaultGame input
 pongGreen = rgb 60 100 60
 textGreen = rgb 160 200 160
 txt f = toText >> Text.color textGreen >> monospace >> f >> leftAligned
-msg = "SPACE to start, WS and &uarr;&darr; to move"
+msg = "SPACE to start, 'p' to pause,   'r' to restart, WS and &uarr;&darr; to move"
 make obj shape =
     shape |> filled white
           |> move (obj.x,obj.y)
