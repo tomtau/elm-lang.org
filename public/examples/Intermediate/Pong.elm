@@ -5,6 +5,7 @@ import Keyboard
 import Text
 import Window
 import Char
+import Debug
 
 -- Inputs
 
@@ -46,9 +47,6 @@ defaultGame =
     player1 = player (20-halfWidth) ,
     player2 = player (halfWidth-20) }
 
-
--- Updates
-
 stepObj t ({x,y,vx,vy} as obj) =
     { obj | x <- x + vx*t, y <- y + vy*t }
 
@@ -66,7 +64,7 @@ stepBall t ({x,y,vx,vy} as ball) p1 p2 =
   if not (ball.x |> near 0 halfWidth)
   then { ball | x <- 0, y <- 0 }
   else stepObj t { ball | vx <- stepV vx (ball `within` p1) (ball `within` p2) ,
-                          vy <- stepV vy (y < 7-halfHeight) (y > halfHeight-7) }
+                          vy <- stepV vy (y < 7-halfHeight || ball `within` p1) (y > halfHeight-7 || ball `within` p2) }
 
 stepPlyr : Time -> Int -> Int -> Player -> Player
 stepPlyr t dir points player =
@@ -85,7 +83,7 @@ stepGame {space,keys,dir1,dir2,delta} ({state,ball,player1,player2} as game) = i
            , ball    <- if state == Pause then ball else
                             stepBall delta ball player1 player2
            , player1 <- stepPlyr delta dir1 score1 player1
-           , player2 <- stepPlyr delta dir2 score2 player2 }
+           , player2 <- stepPlyr delta dir2 score2 player2 } |> Debug.watch "game"
 
 gameState = foldp stepGame defaultGame input
 
