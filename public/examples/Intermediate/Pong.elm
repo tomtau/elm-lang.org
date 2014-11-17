@@ -54,17 +54,25 @@ near k c n = n >= k-c && n <= k+c
 within ball paddle = (ball.x |> near paddle.x 8)
                   && (ball.y |> near paddle.y 20)
 
-stepV v lowerCollision upperCollision =
-  if | lowerCollision -> abs v
-     | upperCollision -> 0 - abs v
-     | otherwise      -> v
+flipY ball paddle =
+  if | not (ball.y |> near paddle.y 15) -> 0 - ball.vy
+     | not (paddle.vy == 0) -> (0 - ball.vy)+0.5*paddle.vy
+     | otherwise -> ball.vy
 
+stepV ball p1 p2 =
+  if | (ball `within` p1) -> (abs ball.vx, flipY ball p1)
+     | (ball `within` p2) -> (0 - abs ball.vx, flipY ball p2)
+     | (ball.y < 7-halfHeight) -> (ball.vx, abs ball.vy)
+     | (ball.y > halfHeight-7) -> (ball.vx, 0 - abs ball.vy)
+     | otherwise      -> (ball.vx, ball.vy)
+
+-- stepV vx ball (ball `within` p1) p1 (ball `within` p2) p2
+-- stepV vy ball (y < 7-halfHeight || ball `within` p1) p1 (y > halfHeight-7 || ball `within` p2) p2
 stepBall : Time -> Ball -> Player -> Player -> Ball
 stepBall t ({x,y,vx,vy} as ball) p1 p2 =
   if not (ball.x |> near 0 halfWidth)
   then { ball | x <- 0, y <- 0 }
-  else stepObj t { ball | vx <- stepV vx (ball `within` p1) (ball `within` p2) ,
-                          vy <- stepV vy (y < 7-halfHeight || ball `within` p1) (y > halfHeight-7 || ball `within` p2) }
+  else stepObj t { ball | vx <- fst (stepV ball p1 p2), vy <- snd (stepV ball p1 p2) }
 
 stepPlyr : Time -> Int -> Int -> Player -> Player
 stepPlyr t dir points player =
