@@ -35,7 +35,7 @@ data State = Play | Pause
 
 type Ball = { x:Float, y:Float, vx:Float, vy:Float }
 type Player = { x:Float, y:Float, vx:Float, vy:Float, score:Int }
-type Game = { state:State, ball:Ball, player1:Player, player2:Player }
+type Game = { state:State, ball1:Ball,ball2:Ball, player1:Player, player2:Player }
 
 player : Float -> Player
 player x = { x=x, y=0, vx=0, vy=0, score=0 }
@@ -43,7 +43,8 @@ player x = { x=x, y=0, vx=0, vy=0, score=0 }
 defaultGame : Game
 defaultGame =
   { state   = Pause,
-    ball    = { x=0, y=0, vx=200, vy=200 },
+    ball1    = { x=0, y=8, vx=200, vy=200 },
+    ball2    = { x=0, y=-8, vx=-200, vy=200 },
     player1 = player (20-halfWidth) ,
     player2 = player (halfWidth-20) }
 
@@ -81,15 +82,17 @@ stepPlyr t dir points player =
                 , score <- player.score + points }
 
 stepGame : Input -> Game -> Game
-stepGame {space,keys,dir1,dir2,delta} ({state,ball,player1,player2} as game) = if (any ((==)restartKey) keys) then defaultGame else
-  let score1 = if ball.x >  halfWidth then 1 else 0
-      score2 = if ball.x < -halfWidth then 1 else 0
+stepGame {space,keys,dir1,dir2,delta} ({state,ball1,ball2,player1,player2} as game) = if (any ((==)restartKey) keys) then defaultGame else
+  let score1 = if (ball1.x > halfWidth || ball2.x > halfWidth) then 1 else 0
+      score2 = if (ball1.x < -halfWidth || ball2.x < -halfWidth) then 1 else 0
   in  {game| state   <- if | space            -> Play
                            | (any ((==)pauseKey) keys)             -> Pause
                            | score1 /= score2 -> Pause
                            | otherwise        -> state
-           , ball    <- if state == Pause then ball else
-                            stepBall delta ball player1 player2
+           , ball1    <- if state == Pause then ball1 else
+                            stepBall delta ball1 player1 player2
+           , ball2    <- if state == Pause then ball2 else
+                            stepBall delta ball2 player1 player2
            , player1 <- stepPlyr delta dir1 score1 player1
            , player2 <- stepPlyr delta dir2 score2 player2 } |> Debug.watch "game"
 
@@ -107,12 +110,13 @@ make obj shape =
           |> move (obj.x,obj.y)
 
 display : (Int,Int) -> Game -> Element
-display (w,h) {state,ball,player1,player2} =
+display (w,h) {state,ball1,ball2,player1,player2} =
   let scores : Element
       scores = txt (Text.height 50) (show player1.score ++ "  " ++ show player2.score)
   in container w h middle <| collage gameWidth gameHeight
        [ rect gameWidth gameHeight |> filled pongGreen
-       , oval 15 15 |> make ball
+       , oval 15 15 |> make ball1
+       , oval 15 15 |> make ball2
        , rect 10 40 |> make player1
        , rect 10 40 |> make player2
        , rect 0 gameHeight |> outlined (dashed textGreen)
