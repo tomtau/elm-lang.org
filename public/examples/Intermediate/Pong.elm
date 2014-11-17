@@ -4,15 +4,22 @@
 import Keyboard
 import Text
 import Window
+import Char
 
 -- Inputs
 
-type Input = { space:Bool, ctrl:Bool, dir1:Int, dir2:Int, delta:Time }
+restartKey : Int
+restartKey = Char.toCode 'r'
+
+pauseKey : Int
+pauseKey = Char.toCode 'p'
+
+type Input = { space:Bool, keys: [Keyboard.KeyCode], dir1:Int, dir2:Int, delta:Time }
 
 delta = inSeconds <~ fps 35
 
 input = sampleOn delta (Input <~ Keyboard.space
-                               ~ Keyboard.ctrl
+                               ~ Keyboard.keysDown
                                ~ lift .y Keyboard.wasd
                                ~ lift .y Keyboard.arrows
                                ~ delta)
@@ -68,11 +75,11 @@ stepPlyr t dir points player =
                 , score <- player.score + points }
 
 stepGame : Input -> Game -> Game
-stepGame {space,ctrl,dir1,dir2,delta} ({state,ball,player1,player2} as game) =
+stepGame {space,keys,dir1,dir2,delta} ({state,ball,player1,player2} as game) =
   let score1 = if ball.x >  halfWidth then 1 else 0
       score2 = if ball.x < -halfWidth then 1 else 0
   in  {game| state   <- if | space            -> Play
-                           | ctrl              -> Pause
+                           | (any ((==)pauseKey) keys)             -> Pause
                            | score1 /= score2 -> Pause
                            | otherwise        -> state
            , ball    <- if state == Pause then ball else
