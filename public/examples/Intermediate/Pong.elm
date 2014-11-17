@@ -15,13 +15,13 @@ restartKey = Char.toCode 'r'
 pauseKey : Int
 pauseKey = Char.toCode 'p'
 
-type Input = { space:Bool, keys: [Keyboard.KeyCode], dir1:Int, dir2:Int, delta:Time }
+type Input = { space:Bool, keys: [Keyboard.KeyCode],  dir2:Int, delta:Time }--dir1:Int,
 
 delta = inSeconds <~ fps 35
 
 input = sampleOn delta (Input <~ Keyboard.space
                                ~ Keyboard.keysDown
-                               ~ lift .y Keyboard.wasd
+                               --~ lift .y Keyboard.wasd
                                ~ lift .y Keyboard.arrows
                                ~ delta)
 
@@ -81,19 +81,29 @@ stepPlyr t dir points player =
   in  { player1 | y <- clamp (22-halfHeight) (halfHeight-22) player1.y
                 , score <- player.score + points }
 
+nearer : Player -> Ball -> Ball -> Ball
+nearer player ball1 ball2 = if (ball1.x < ball2.x) then ball1 else ball2
+
+corDir : Player -> Ball -> Int
+corDir player ball = if (player.y < ball.y) then 1 else -1
+
+simpleAI : Game -> Int
+simpleAI ({state,ball1,ball2,player1,player2} as game) =
+  if (state == Play) then let nBall = nearer player1 ball1 ball2 in (corDir player1 nBall) else 0
+
 stepGame : Input -> Game -> Game
-stepGame {space,keys,dir1,dir2,delta} ({state,ball1,ball2,player1,player2} as game) = if (any ((==)restartKey) keys) then defaultGame else
+stepGame {space,keys,dir2,delta} ({state,ball1,ball2,player1,player2} as game) = if (any ((==)restartKey) keys) then defaultGame else
   let score1 = if (ball1.x > halfWidth || ball2.x > halfWidth) then 1 else 0
       score2 = if (ball1.x < -halfWidth || ball2.x < -halfWidth) then 1 else 0
   in  {game| state   <- if | space            -> Play
                            | (any ((==)pauseKey) keys)             -> Pause
-                           | score1 /= score2 -> Pause
+                           --| score1 /= score2 -> Pause
                            | otherwise        -> state
            , ball1    <- if state == Pause then ball1 else
                             stepBall delta ball1 player1 player2
            , ball2    <- if state == Pause then ball2 else
                             stepBall delta ball2 player1 player2
-           , player1 <- stepPlyr delta dir1 score1 player1
+           , player1 <- stepPlyr delta (simpleAI game) score1 player1
            , player2 <- stepPlyr delta dir2 score2 player2 } |> Debug.watch "game"
 
 gameState = foldp stepGame defaultGame input
